@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STM32 Automotive Telematics & Digital Cockpit</title>
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --panel-bg: #151922;
+            --accent-cyan: #00f2fe;
+            --accent-blue: #4facfe;
+            --accent-red: #ff3366;
+            --accent-amber: #ffb703;
+            --accent-green: #06d6a0;
+            --text-main: #f0f6fc;
+            --text-dim: #8b949e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Top Bar */
+        header {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 24px;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
+        }
+
+        .title-group h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title-group p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        .connection-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(255, 51, 102, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge.connected {
+            background: rgba(6, 214, 160, 0.15);
+            color: var(--accent-green);
+            border-color: rgba(6, 214, 160, 0.3);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        button.btn-connect {
+            background: linear-gradient(135deg, #0052d4, #4364f7, #6fb1fc);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(67, 100, 247, 0.3);
+        }
+
+        button.btn-connect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(67, 100, 247, 0.5);
+        }
+
+        button.btn-connect.btn-disconnect {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            box-shadow: 0 4px 12px rgba(255, 65, 108, 0.3);
+        }
+
+        /* Dashboard Grid Layout */
+        .cockpit-container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 340px 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        /* Gauge Cards */
+        .gauge-card {
+            background: var(--panel-bg);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 12px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .gauge-digital {
+            position: absolute;
+            bottom: 45px;
+            text-align: center;
+        }
+
+        .gauge-val {
+            font-size: 2.8rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -1px;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+        }
+
+        .gauge-unit {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Center Infotainment Cluster */
+        .center-cluster {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Drive Mode & Gear Box */
+        .gear-mode-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+        }
+
+        .mode-pill {
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+        }
+
+        .mode-pill.SPORT {
+            background: rgba(255, 51, 102, 0.15);
+            color: var(--accent-red);
+            border-color: rgba(255, 51, 102, 0.4);
+            text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
+        }
+
+        .mode-pill.ECO {
+            background: rgba(6, 214, 160, 0.15);
+            color: var(--accent-green);
+            border-color: rgba(6, 214, 160, 0.4);
+            text-shadow: 0 0 10px rgba(6, 214, 160, 0.5);
+        }
+
+        .gear-display {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+        }
+
+        /* Indicators Grid */
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .indicator-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.2s ease;
+        }
+
+        .indicator-icon {
+            font-size: 1.3rem;
+            opacity: 0.25;
+            transition: opacity 0.2s, filter 0.2s;
+        }
+
+        .indicator-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        .indicator-item.active-brake {
+            background: rgba(255, 51, 102, 0.2);
+            border-color: rgba(255, 51, 102, 0.5);
+        }
+        .indicator-item.active-brake .indicator-icon {
+            opacity: 1;
+            filter: drop-shadow(0 0 8px var(--accent-red));
+        }
+
+        .indicator-item.active-mil {
+            background: rgba(255, 183, 3, 0.2);
+            border-color: rgba(255, 183, 3, 0.5);
+        }
+        .indicator-item.active-mil .indicator-icon {
+            opacity: 1;
+            filter: drop-shadow(0 0 8px var(--accent-amber));
+        }
+
+        /* OBD Diagnostic Card */
+        .dtc-box {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .dtc-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        .dtc-code-val {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            font-family: monospace;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .dtc-code-val.has-fault {
+            color: var(--accent-red);
+            border-left-color: var(--accent-red);
+            background: rgba(255, 51, 102, 0.1);
+        }
+
+        /* Bars (Throttle & Coolant) */
+        .bar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .bar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .bar-label-val {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .progress-track {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.15s ease-out;
+        }
+
+        .fill-throttle {
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+        }
+
+        .fill-temp {
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-amber), var(--accent-red));
+        }
+
+        /* CAN Bus Diagnostics Bar */
+        .can-health-card {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.8rem;
+        }
+
+        .diag-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .diag-item span.val {
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: monospace;
+        }
+
+        /* Live Terminal Monitor */
+        .serial-terminal-box {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 15px;
+            background: #05070a;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 14px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #06d6a0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        /* Controls Help / Interactive Bar */
+        .keyboard-controls-bar {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .cmd-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+        }
+
+        .cmd-btn kbd {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            border-bottom: 2px solid rgba(0, 0, 0, 0.4);
+        }
+
+        .cmd-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .cmd-btn:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="title-group">
+            <h1>AUTOMOTIVE TELEMATICS & DIGITAL COCKPIT</h1>
+            <p>STM32F407 Dual bxCAN Gateway | Extended 29-bit J1939 | 500 kbps</p>
+        </div>
+        <div class="connection-controls">
+            <div id="statusBadge" class="status-badge">
+                <span class="status-dot"></span>
+                <span id="statusText">CHƯA KẾT NỐI</span>
+            </div>
+            <button id="btnConnect" class="btn-connect" onclick="toggleConnect()">🔌 KẾT NỐI COM18</button>
+        </div>
+    </header>
+
+    <!-- Main Cockpit Area -->
+    <main class="cockpit-container">
+        
+        <!-- Left: Speedometer Gauge -->
+        <div class="gauge-card">
+            <canvas id="speedGauge" width="360" height="360"></canvas>
+            <div class="gauge-digital">
+                <div class="gauge-val" id="digitalSpeed" style="color: var(--accent-cyan);">0</div>
+                <div class="gauge-unit">KM/H</div>
+            </div>
+        </div>
+
+        <!-- Center: Infotainment & Telematics -->
+        <div class="center-cluster">
+            
+            <!-- Drive Mode & Current Gear -->
+            <div class="card gear-mode-box">
+                <div>
+                    <div style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 4px; font-weight: 600;">CHẾ ĐỘ LÁI</div>
+                    <div id="modePill" class="mode-pill NORMAL">NORMAL</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 4px; font-weight: 600;">CẤP SỐ</div>
+                    <div id="gearDisplay" class="gear-display">D1</div>
+                </div>
+            </div>
+
+            <!-- Indicators -->
+            <div class="card indicators-grid">
+                <div id="brakeIndicator" class="indicator-item">
+                    <span class="indicator-icon">🛑</span>
+                    <div>
+                        <div class="indicator-label">PHANH XE</div>
+                        <div id="brakeText" style="font-size: 0.85rem; font-weight: 700;">NHẢ</div>
+                    </div>
+                </div>
+                <div id="milIndicator" class="indicator-item">
+                    <span class="indicator-icon">⚠️</span>
+                    <div>
+                        <div class="indicator-label">CHECK ENGINE</div>
+                        <div id="milText" style="font-size: 0.85rem; font-weight: 700; color: var(--text-dim);">TẮT</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DTC Diagnostic -->
+            <div class="card dtc-box">
+                <div class="dtc-header">
+                    <span>MÃ LỖI OBD-II CHẨN ĐOÁN</span>
+                    <span id="dtcStatus">HỆ THỐNG TỐT</span>
+                </div>
+                <div id="dtcVal" class="dtc-code-val">NO FAULT (P0000)</div>
+            </div>
+
+            <!-- UDS ISO 14229 & ISO-TP Diagnostic Card -->
+            <div class="card dtc-box">
+                <div class="dtc-header">
+                    <span>SỐ KHUNG XE (VIN - ISO-TP 17 BYTES)</span>
+                    <span id="secBadge" style="color: var(--accent-amber); font-weight: bold;">LOCKED</span>
+                </div>
+                <div id="vinVal" class="dtc-code-val" style="color: var(--accent-cyan); font-size: 1.05rem; letter-spacing: 1px;">CHƯA ĐỌC (Bấm phím V)</div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; margin-top: 4px;">
+                    <span style="color: var(--text-dim);">Bảo mật ECU (Security 0x27):</span>
+                    <span id="secVal" style="font-weight: bold; color: var(--accent-amber);">LOCKED (0x27)</span>
+                </div>
+            </div>
+
+            <!-- EDR Crash Freeze Frame (Flash Sector 7) Card -->
+            <div class="card dtc-box" id="edrCard">
+                <div class="dtc-header">
+                    <span>HỘP ĐEN VA CHẠM (EDR - FLASH SECTOR 7)</span>
+                    <span id="edrBadge" style="color: var(--accent-green); font-weight: bold;">AN TOÀN</span>
+                </div>
+                <div id="edrVal" class="dtc-code-val" style="color: var(--accent-green); font-size: 0.95rem; letter-spacing: 0.5px;">FLASH EMPTY (READY)</div>
+                <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">
+                    Dữ liệu đóng băng lưu độc lập trên Flash Sector 7 (0x08060000) - Không mất khi mất điện
+                </div>
+            </div>
+
+            <!-- Bars: Throttle & Coolant -->
+            <div class="card bar-group">
+                <div class="bar-container">
+                    <div class="bar-label-val">
+                        <span style="color: var(--text-dim);">Chân Ga (Throttle)</span>
+                        <span id="throttleVal">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div id="throttleBar" class="progress-fill fill-throttle"></div>
+                    </div>
+                </div>
+                <div class="bar-container">
+                    <div class="bar-label-val">
+                        <span style="color: var(--text-dim);">Nhiệt Độ Nước (Coolant)</span>
+                        <span id="tempVal">85°C</span>
+                    </div>
+                    <div class="progress-track">
+                        <div id="tempBar" class="progress-fill fill-temp"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right: Tachometer Gauge -->
+        <div class="gauge-card">
+            <canvas id="rpmGauge" width="360" height="360"></canvas>
+            <div class="gauge-digital">
+                <div class="gauge-val" id="digitalRpm" style="color: var(--accent-blue);">800</div>
+                <div class="gauge-unit">RPM</div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom CAN Hardware Health Bar -->
+    <section class="can-health-card">
+        <div class="diag-item">
+            <span style="color: var(--text-dim);">CAN Bus Health:</span>
+            <span id="busHealthText" class="val" style="color: var(--accent-green);">HEALTHY (ACTIVE)</span>
+        </div>
+        <div class="diag-item">
+            <span style="color: var(--text-dim);">Tx Error Counter (TEC):</span>
+            <span id="tecVal" class="val">0</span>
+        </div>
+        <div class="diag-item">
+            <span style="color: var(--text-dim);">Rx Error Counter (REC):</span>
+            <span id="recVal" class="val">0</span>
+        </div>
+        <div class="diag-item">
+            <span style="color: var(--text-dim);">Gói tin nhận (Packets):</span>
+            <span id="packetCount" class="val">0</span>
+        </div>
+    </section>
+
+    <!-- Live Serial Raw Stream Monitor -->
+    <div class="serial-terminal-box">
+        <span style="color: var(--accent-cyan); font-weight: bold;">LIVE SERIAL RX:</span>
+        <span id="rawSerialText" style="color: #a0aec0;">Đang chờ cổng COM mở...</span>
+    </div>
+
+    <!-- Interactive PC Controls Bar -->
+    <footer class="keyboard-controls-bar">
+        <button class="cmd-btn" onclick="sendCommand('b')">
+            <kbd>B</kbd> Đạp / Nhả Phanh
+        </button>
+        <button class="cmd-btn" onclick="sendCommand('m')">
+            <kbd>M</kbd> Chuyển Mode Lái
+        </button>
+        <button class="cmd-btn" onclick="sendCommand('k')" style="border-color: rgba(255, 51, 102, 0.5); background: rgba(255, 51, 102, 0.15); color: #ff3366;">
+            <kbd style="color: #ff3366;">K</kbd> 💥 Mô Phỏng Tai Nạn (Lưu Flash)
+        </button>
+        <button class="cmd-btn" onclick="sendCommand('r')" style="border-color: rgba(0, 242, 254, 0.4); background: rgba(0, 242, 254, 0.1);">
+            <kbd>R</kbd> 📡 Đọc Hộp Đen (UDS 0x19)
+        </button>
+        <button class="cmd-btn" onclick="sendCommand('c')" style="border-color: rgba(6, 214, 160, 0.4); background: rgba(6, 214, 160, 0.1);">
+            <kbd>C</kbd> 🧹 Xóa Hộp Đen & DTC (UDS 0x14)
+        </button>
+        <button class="cmd-btn" onclick="sendCommand('v')" style="border-color: rgba(0, 242, 254, 0.4); background: rgba(0, 242, 254, 0.1);">
+            <kbd>V</kbd> Đọc Số VIN (UDS 0x22)
+        </button>
+        <button class="cmd-btn" onclick="sendCommand('s')" style="border-color: rgba(255, 183, 3, 0.4); background: rgba(255, 183, 3, 0.1);">
+            <kbd>S</kbd> Mở Khóa Security (UDS 0x27)
+        </button>
+    </footer>
+
+    <!-- Logic Script & Web Serial Driver -->
+    <script>
+        let port = null;
+        let reader = null;
+        let writer = null;
+        let keepReading = false;
+        let rxBuffer = "";
+        let packetCounter = 0;
+
+        // Current Car States
+        let currentVehicle = {
+            rpm: 800,
+            spd: 0,
+            temp: 85,
+            thr: 15,
+            mil: 0,
+            brk: 0,
+            mode: "NORMAL",
+            dtc: "NONE0000",
+            tec: 0,
+            rec: 0
+        };
+
+        // Smooth Display Interpolation
+        let dispSpeed = 0;
+        let dispRpm = 800;
+
+        // --- GAUGE RENDERING (CANVAS) ---
+        const speedCanvas = document.getElementById('speedGauge');
+        const speedCtx = speedCanvas.getContext('2d');
+        const rpmCanvas = document.getElementById('rpmGauge');
+        const rpmCtx = rpmCanvas.getContext('2d');
+
+        function drawGauge(ctx, value, maxVal, isRpm = false) {
+            const w = ctx.canvas.width;
+            const h = ctx.canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const radius = 135;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const startAngle = 0.75 * Math.PI;
+            const endAngle = 2.25 * Math.PI;
+            const totalAngle = endAngle - startAngle;
+
+            // Background Outer Track
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, startAngle, endAngle);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+            ctx.lineWidth = 14;
+            ctx.lineCap = "round";
+            ctx.stroke();
+
+            // Progress Arc
+            const pct = Math.min(Math.max(value / maxVal, 0), 1);
+            const currentAngle = startAngle + pct * totalAngle;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, startAngle, currentAngle);
+
+            let grad = ctx.createLinearGradient(0, h, w, 0);
+            if (isRpm) {
+                grad.addColorStop(0, "#4facfe");
+                grad.addColorStop(0.7, "#00f2fe");
+                grad.addColorStop(1, "#ff3366");
+            } else {
+                grad.addColorStop(0, "#00c6ff");
+                grad.addColorStop(1, "#0072ff");
+            }
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 14;
+            ctx.lineCap = "round";
+            ctx.stroke();
+
+            // Tick Marks
+            const ticks = isRpm ? 8 : 12;
+            for (let i = 0; i <= ticks; i++) {
+                const angle = startAngle + (i / ticks) * totalAngle;
+                const isMajor = isRpm ? true : (i % 2 === 0);
+                const tickLen = isMajor ? 12 : 6;
+                const rInner = radius - 18;
+                const rOuter = rInner - tickLen;
+
+                const x1 = cx + Math.cos(angle) * rInner;
+                const y1 = cy + Math.sin(angle) * rInner;
+                const x2 = cx + Math.cos(angle) * rOuter;
+                const y2 = cy + Math.sin(angle) * rOuter;
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.strokeStyle = (isRpm && i >= 6) ? "#ff3366" : "rgba(255, 255, 255, 0.25)";
+                ctx.lineWidth = isMajor ? 2.5 : 1;
+                ctx.stroke();
+
+                if (isMajor) {
+                    const rText = rOuter - 14;
+                    const tx = cx + Math.cos(angle) * rText;
+                    const ty = cy + Math.sin(angle) * rText;
+                    ctx.fillStyle = (isRpm && i >= 6) ? "#ff3366" : "rgba(255, 255, 255, 0.6)";
+                    ctx.font = "bold 12px 'Segoe UI', monospace";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    const numText = isRpm ? i : (i * 20);
+                    ctx.fillText(numText, tx, ty);
+                }
+            }
+
+            // Needle
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(currentAngle);
+
+            ctx.beginPath();
+            ctx.moveTo(-15, 0);
+            ctx.lineTo(0, -3);
+            ctx.lineTo(radius - 20, 0);
+            ctx.lineTo(0, 3);
+            ctx.closePath();
+
+            ctx.fillStyle = isRpm ? "#ff3366" : "#00f2fe";
+            ctx.shadowColor = isRpm ? "#ff3366" : "#00f2fe";
+            ctx.shadowBlur = 12;
+            ctx.fill();
+
+            // Center Pin
+            ctx.beginPath();
+            ctx.arc(0, 0, 7, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Animation Loop (60 FPS smooth damping)
+        function animate() {
+            dispSpeed += (currentVehicle.spd - dispSpeed) * 0.15;
+            dispRpm += (currentVehicle.rpm - dispRpm) * 0.15;
+
+            drawGauge(speedCtx, dispSpeed, 240, false);
+            drawGauge(rpmCtx, dispRpm, 8000, true);
+
+            document.getElementById('digitalSpeed').innerText = Math.round(dispSpeed);
+            document.getElementById('digitalRpm').innerText = Math.round(dispRpm);
+
+            requestAnimationFrame(animate);
+        }
+        requestAnimationFrame(animate);
+
+        // --- WEB SERIAL COMMUNICATION (DIRECT NATIVE STREAM) ---
+        async function toggleConnect() {
+            if (port) {
+                keepReading = false;
+                if (reader) {
+                    try { await reader.cancel(); } catch(e){}
+                }
+                if (port) {
+                    try { await port.close(); } catch(e){}
+                }
+                port = null;
+                reader = null;
+                writer = null;
+                updateConnectionUI(false);
+            } else {
+                try {
+                    if (!("serial" in navigator)) {
+                        alert("Trình duyệt này không hỗ trợ Web Serial API. Vui lòng mở bằng Google Chrome hoặc Microsoft Edge!");
+                        return;
+                    }
+                    port = await navigator.serial.requestPort();
+                    await port.open({ baudRate: 115200 });
+
+                    // Bật cờ tín hiệu DTR/RTS cho chip FTDI / CH340 / CP2102
+                    try {
+                        await port.setSignals({ dataTerminalReady: true, requestToSend: true });
+                    } catch (e) {
+                        console.warn("setSignals not supported on this port", e);
+                    }
+
+                    writer = port.writable.getWriter();
+                    keepReading = true;
+                    updateConnectionUI(true);
+                    readDirectLoop();
+                } catch (err) {
+                    console.error("Lỗi kết nối cổng Serial:", err);
+                    alert("Không thể mở cổng COM! Hãy kiểm tra xem bạn đã tắt PuTTY / Miniterm / open_serial.bat trước chưa nhé.\n\nChi tiết: " + err.message);
+                }
+            }
+        }
+
+        function updateConnectionUI(connected) {
+            const badge = document.getElementById('statusBadge');
+            const statusText = document.getElementById('statusText');
+            const btn = document.getElementById('btnConnect');
+            const rawText = document.getElementById('rawSerialText');
+
+            if (connected) {
+                badge.classList.add('connected');
+                statusText.innerText = "ĐÃ KẾT NỐI COM";
+                btn.classList.add('btn-disconnect');
+                btn.innerText = "❌ NGẮT KẾT NỐI";
+                rawText.innerText = "Đang lắng nghe luồng dữ liệu từ STM32...";
+            } else {
+                badge.classList.remove('connected');
+                statusText.innerText = "CHƯA KẾT NỐI";
+                btn.classList.remove('btn-disconnect');
+                btn.innerText = "🔌 KẾT NỐI COM18";
+                rawText.innerText = "Đã ngắt kết nối.";
+            }
+        }
+
+        async function readDirectLoop() {
+            reader = port.readable.getReader();
+            const decoder = new TextDecoder();
+            const rawElem = document.getElementById('rawSerialText');
+
+            try {
+                while (keepReading) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (value) {
+                        const chunk = decoder.decode(value, { stream: true });
+                        rxBuffer += chunk;
+
+                        // Tách dòng an toàn cho cả \r\n lẫn \n
+                        let lines = rxBuffer.split(/\r?\n/);
+                        rxBuffer = lines.pop(); // Giữ lại phần thừa chưa đủ dòng
+
+                        for (let line of lines) {
+                            line = line.trim();
+                            if (line.length > 0) {
+                                rawElem.innerText = line; // Hiển thị dòng raw gần nhất lên màn hình
+                            }
+                            if (line.startsWith("{") && line.endsWith("}")) {
+                                try {
+                                    const json = JSON.parse(line);
+                                    updateDashboardData(json);
+                                } catch (e) {
+                                    console.warn("JSON error:", e, line);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn("Read stream interrupted:", err);
+            } finally {
+                try { reader.releaseLock(); } catch(e){}
+            }
+        }
+
+        async function sendCommand(char) {
+            if (!writer) {
+                alert("Bạn cần bấm 'KẾT NỐI COM18' trước khi gửi lệnh điều khiển!");
+                return;
+            }
+            try {
+                const encoder = new TextEncoder();
+                await writer.write(encoder.encode(char));
+            } catch (err) {
+                console.error("Gửi lệnh thất bại:", err);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (['b', 'm', 'e', 'c', 'v', 's', 'k', 'r'].includes(key)) {
+                sendCommand(key);
+            }
+        });
+
+        // --- CẬP NHẬT GIAO DIỆN THEO DỮ LIỆU TELEMETRY ---
+        function updateDashboardData(data) {
+            packetCounter++;
+            currentVehicle = data;
+
+            // 1. Số gói tin & Sức khỏe bus CAN
+            document.getElementById('packetCount').innerText = packetCounter;
+            document.getElementById('tecVal').innerText = data.tec;
+            document.getElementById('recVal').innerText = data.rec;
+
+            const healthText = document.getElementById('busHealthText');
+            if (data.tec === 0 && data.rec === 0) {
+                healthText.innerText = "HEALTHY (ACTIVE)";
+                healthText.style.color = "var(--accent-green)";
+            } else if (data.tec >= 128 || data.rec >= 128) {
+                healthText.innerText = "BUS-OFF / ERROR PASSIVE";
+                healthText.style.color = "var(--accent-red)";
+            } else {
+                healthText.innerText = "WARNING (ERROR COUNT ELEVATED)";
+                healthText.style.color = "var(--accent-amber)";
+            }
+
+            // 2. Chế độ lái (Drive Mode)
+            const modePill = document.getElementById('modePill');
+            modePill.className = "mode-pill " + data.mode;
+            modePill.innerText = data.mode;
+
+            // 3. Tính toán cấp số xe tự động
+            const gearDisp = document.getElementById('gearDisplay');
+            if (data.spd === 0) gearDisp.innerText = "P";
+            else if (data.spd < 30) gearDisp.innerText = "D1";
+            else if (data.spd < 55) gearDisp.innerText = "D2";
+            else if (data.spd < 80) gearDisp.innerText = "D3";
+            else if (data.spd < 105) gearDisp.innerText = "D4";
+            else gearDisp.innerText = "D5";
+
+            // 4. Đèn phanh
+            const brakeItem = document.getElementById('brakeIndicator');
+            const brakeText = document.getElementById('brakeText');
+            if (data.brk === 1) {
+                brakeItem.classList.add('active-brake');
+                brakeText.innerText = "ĐANG ĐẠP";
+                brakeText.style.color = "var(--accent-red)";
+            } else {
+                brakeItem.classList.remove('active-brake');
+                brakeText.innerText = "NHẢ";
+                brakeText.style.color = "var(--text-main)";
+            }
+
+            // 5. Đèn cảnh báo Check Engine (MIL)
+            const milItem = document.getElementById('milIndicator');
+            const milText = document.getElementById('milText');
+            if (data.mil === 1) {
+                milItem.classList.add('active-mil');
+                milText.innerText = "SÁNG NGUY HIỂM";
+                milText.style.color = "var(--accent-amber)";
+            } else {
+                milItem.classList.remove('active-mil');
+                milText.innerText = "TẮT (OK)";
+                milText.style.color = "var(--text-dim)";
+            }
+
+            // 6. Mã lỗi chẩn đoán OBD-II (DTC)
+            const dtcVal = document.getElementById('dtcVal');
+            const dtcStatus = document.getElementById('dtcStatus');
+            if (data.dtc && !data.dtc.startsWith("NONE")) {
+                dtcVal.innerText = data.dtc + " - Coolant Sensor Circuit";
+                dtcVal.classList.add('has-fault');
+                dtcStatus.innerText = "PHÁT HIỆN SỰ CỐ";
+                dtcStatus.style.color = "var(--accent-red)";
+            } else {
+                dtcVal.innerText = "NO FAULT (P0000)";
+                dtcVal.classList.remove('has-fault');
+                dtcStatus.innerText = "HỆ THỐNG TỐT";
+                dtcStatus.style.color = "var(--accent-green)";
+            }
+
+            // 6.5. UDS Diagnostic Data (VIN & Security)
+            if (data.vin) {
+                document.getElementById('vinVal').innerText = data.vin;
+            }
+            if (data.sec) {
+                const secElem = document.getElementById('secVal');
+                const secBadge = document.getElementById('secBadge');
+                secElem.innerText = data.sec;
+                if (data.sec.includes("UNLOCKED")) {
+                    secElem.style.color = "var(--accent-green)";
+                    secBadge.innerText = "UNLOCKED";
+                    secBadge.style.color = "var(--accent-green)";
+                } else {
+                    secElem.style.color = "var(--accent-amber)";
+                    secBadge.innerText = "LOCKED";
+                    secBadge.style.color = "var(--accent-amber)";
+                }
+            }
+
+            // 6.6. EDR Crash Data Logger (Flash Sector 7)
+            if (data.edr) {
+                const edrVal = document.getElementById('edrVal');
+                const edrBadge = document.getElementById('edrBadge');
+                edrVal.innerText = data.edr;
+                if (data.crash === 1 || data.edr.includes("CRASH")) {
+                    edrBadge.innerText = "🚨 PHÁT HIỆN TAI NẠN (LƯU FLASH)";
+                    edrBadge.style.color = "var(--accent-red)";
+                    edrVal.style.color = "var(--accent-red)";
+                    edrVal.classList.add('has-fault');
+                } else {
+                    edrBadge.innerText = "AN TOÀN (FLASH SẴN SÀNG)";
+                    edrBadge.style.color = "var(--accent-green)";
+                    edrVal.style.color = "var(--accent-green)";
+                    edrVal.classList.remove('has-fault');
+                }
+            }
+
+            // 7. Thanh vị trí chân ga & Nhiệt độ nước làm mát
+            document.getElementById('throttleVal').innerText = data.thr + "%";
+            document.getElementById('throttleBar').style.width = Math.min(data.thr, 100) + "%";
+
+            document.getElementById('tempVal').innerText = data.temp + "°C";
+            let tempPct = Math.min(Math.max((data.temp / 120) * 100, 0), 100);
+            document.getElementById('tempBar').style.width = tempPct + "%";
+        }
+    </script>
+</body>
+</html>
