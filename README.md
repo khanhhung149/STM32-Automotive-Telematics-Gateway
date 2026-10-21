@@ -184,7 +184,7 @@ Output binary: `Debug/STM32407TEST.elf` (approx. 38 KB Flash, 21 KB RAM).
 - Press the physical **RESET** button on the STM32 board once after programming.
 
 ### 3. Launch Digital Cockpit
-1. Open [`dashboard.html`](dashboard.html) directly in Chrome or Edge (or run [`open_dashboard.bat`](open_dashboard.bat)).
+1. Open [`dashboard.html`](dashboard.html) directly in Google Chrome or Microsoft Edge.
 2. Click **`🔌 KẾT NỐI COM18`** (select your FT232 serial COM port).
 3. Interact via UI buttons or keyboard shortcuts:
    - <kbd>B</kbd>: Toggle Brake Pedal (Deceleration / Brake lights)
@@ -197,13 +197,5 @@ Output binary: `Debug/STM32407TEST.elf` (approx. 38 KB Flash, 21 KB RAM).
 
 ---
 
-## 📚 Technical Documentation
-For a deep-dive engineering reference covering silicon registers, FreeRTOS priority design, bitwise arbitration, and ISO-TP state machines, read the complete technical handbook:
-👉 **[Automotive Telematics Engineering Handbook (Vietnamese)](docs/automotive_telematics_freertos_handbook.md)**
-
----
-
-## 👤 Author & Credentials
-- **Lead Developer:** Nguyen Khanh Hung ([@khanhhung149](https://github.com/khanhhung149))
-- **Specialization:** Embedded Systems, Automotive Software Engineering, IoT, Real-Time Operating Systems (FreeRTOS, RT-Thread).
-- **License:** MIT License. Free for academic, portfolio, and commercial reference.
+## 📄 License
+This project is open-source and released under the MIT License.
